@@ -1,0 +1,190 @@
+//RECEPTOR
+
+#include <RF24.h>
+#include <RF24_config.h>
+#include <nRF24L01.h>
+#include <printf.h>
+
+#include <SPI.h>
+
+const int CE = 10;
+const int CSN = 9;
+int x1 =0, y1=0,b1,yv1,xv1;
+int x2 =0, y2=0,b2,yv2,xv2;
+int pot=0;
+int cxv=0;
+
+int sa = A2;
+int sb = A3;
+
+int MOTOR_A1 = 7;
+int MOTOR_A2 = 8;
+int PWM_A = 6;
+int STBY = 4;
+int variable_pwmA = 0;
+
+int MOTOR_B1 = 2;
+int MOTOR_B2 = 3;
+int PWM_B = 5;
+int variable_pwmB = 0;
+
+RF24 radio (CE,CSN);
+
+const uint64_t canal = 0x29E29E0;
+//const uint64_t canal = 0x67E67E0;
+int datos[7];
+void setup() {
+  //Serial.begin(9600);
+  radio.begin();
+  radio.openReadingPipe(1,canal);
+  radio.startListening();
+
+  pinMode(MOTOR_A1,OUTPUT);
+  pinMode(MOTOR_A2,OUTPUT);
+  pinMode(PWM_A,OUTPUT);
+  pinMode(MOTOR_B1,OUTPUT);
+  pinMode(MOTOR_B2,OUTPUT);
+  pinMode(PWM_B,OUTPUT);
+  pinMode(STBY,OUTPUT);
+
+
+  pinMode(sa,OUTPUT);
+ pinMode(sb,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+   bool ok=radio.available(); 
+
+     //Leemos los datos y los guardamos en la variable datos[]
+if(ok){
+     radio.read(datos,sizeof(datos));
+    pot = map(datos[6],0,255,50,255);
+     x1 = map(datos[0],0,255,255,-255);
+     y1 = map(datos[1],0,255,-220,220);
+     b1 = datos[2];
+     x2 = map(datos[3],0,255,-pot,pot);
+     y2 = map(datos[4],0,255,255,-255);
+     b2 = datos[5];
+    /* 
+     //reportamos por el puerto serial los datos recibidos
+     Serial.print("X1: " );
+     Serial.print(x1);
+     Serial.print(" , Y1: " );
+     Serial.print(y1);
+     Serial.print(" , B1: " );
+     Serial.print(b1);
+     Serial.print(" , X2: " );
+     Serial.print(x2);
+     Serial.print(" , Y: " );
+     Serial.print(y2);
+     Serial.print(" , b2: " );
+     Serial.print(b2);
+     Serial.print(" , Pot: " );
+     Serial.println(pot);
+
+*/
+
+  if(b2==0){
+      digitalWrite(sa,HIGH);
+      digitalWrite(sb,HIGH);
+  }else{
+    digitalWrite(sa,LOW);
+    digitalWrite(sb,LOW);
+  }
+
+ if(y1>3&&x2<6&&x2>0){  //Adelante
+//    Serial.print("Adelante" );
+    digitalWrite(STBY,HIGH);
+    variable_pwmA = abs(y1)-5;
+    variable_pwmB = abs(y1)+2;
+    digitalWrite(MOTOR_A1,HIGH);
+    digitalWrite(MOTOR_A2,LOW);
+    analogWrite(PWM_A,variable_pwmA);
+    digitalWrite(MOTOR_B1,HIGH);
+    digitalWrite(MOTOR_B2,LOW);
+    analogWrite(PWM_B,variable_pwmB);
+ }
+
+ if(y1<-3&&x2<6&&x2>0){ //Atras
+ //   Serial.print("Atras" );
+    digitalWrite(STBY,HIGH);
+    variable_pwmA = abs(y1)-6;
+    variable_pwmB = abs(y1)+1;
+    digitalWrite(MOTOR_A1,LOW);
+    digitalWrite(MOTOR_A2,HIGH);
+    analogWrite(PWM_A,variable_pwmA);
+    digitalWrite(MOTOR_B1,LOW);
+    digitalWrite(MOTOR_B2,HIGH);
+    analogWrite(PWM_B,variable_pwmB);
+ }
+
+ if (y1<3 && y1>-3 && x2<6 && x2>0){ //Detenido
+   // Serial.print("Detenido" );
+    digitalWrite(STBY,LOW);
+    digitalWrite(MOTOR_A1,LOW);
+    digitalWrite(MOTOR_A2,LOW);
+    digitalWrite(MOTOR_B1,LOW);
+    digitalWrite(MOTOR_B2,LOW);
+ }
+
+ if(x2>7 && y1<5 && y1>-5){  //Izquierda
+  //  Serial.print("Izquierda" );
+      digitalWrite(STBY,HIGH);
+      variable_pwmA = abs(x2);
+      variable_pwmB = abs(x2);
+      digitalWrite(MOTOR_A1,HIGH);
+      digitalWrite(MOTOR_A2,LOW);
+      analogWrite(PWM_A,variable_pwmA);
+      digitalWrite(MOTOR_B1,LOW);
+      digitalWrite(MOTOR_B2,HIGH);
+    analogWrite(PWM_B,variable_pwmB);
+ } 
+
+ if(x2<-1 && y1<5 && y1>-5){ //Derecha
+ // Serial.print("Derecha" );
+      digitalWrite(STBY,HIGH);
+      variable_pwmA = abs(x2);
+      variable_pwmB = abs(x2);
+      digitalWrite(MOTOR_A1,LOW);
+      digitalWrite(MOTOR_A2,HIGH);
+      analogWrite(PWM_A,variable_pwmA);
+      digitalWrite(MOTOR_B1,HIGH);
+      digitalWrite(MOTOR_B2,LOW);
+    analogWrite(PWM_B,variable_pwmB);
+ }
+
+  int curve = map(datos[3], 0, 255, -100, 100); // Modificador para curva
+   curve = curve * abs(y1) / 230;
+
+if(y1>3  && x2>6 ){ //Curva izquierda
+ // Serial.print(" Curva Izquierda" );
+      digitalWrite(STBY,HIGH);
+      variable_pwmA = abs(y1);
+      variable_pwmB = abs(y1)-abs(curve);
+      digitalWrite(MOTOR_A1,HIGH);
+      digitalWrite(MOTOR_A2,LOW);
+      analogWrite(PWM_A,variable_pwmA);
+      digitalWrite(MOTOR_B1,HIGH);
+      digitalWrite(MOTOR_B2,LOW);
+      analogWrite(PWM_B,variable_pwmB);
+}
+  
+
+if(y1>3  && x2<-3 ){ //Curva Derecha
+ // Serial.print(" Curva Derecha" );
+      digitalWrite(STBY,HIGH);
+      variable_pwmA = abs(y1)-abs(curve);
+      variable_pwmB = abs(y1);
+      digitalWrite(MOTOR_A1,HIGH);
+      digitalWrite(MOTOR_A2,LOW);
+      analogWrite(PWM_A,variable_pwmA);
+      digitalWrite(MOTOR_B1,HIGH);
+      digitalWrite(MOTOR_B2,LOW);
+      analogWrite(PWM_B,variable_pwmB);
+}
+
+}
+
+ delay(50);
+}
