@@ -1,0 +1,82 @@
+//Emisor
+
+#include <RF24.h>
+#include <RF24_config.h>
+#include <nRF24L01.h>
+#include <printf.h>
+
+#include <SPI.h>
+
+const int CE = 9;
+const int CSN = 10;
+
+RF24 radio (CE,CSN);
+
+const int pinX1 = A1;  // Pin para el eje X del joystick
+const int pinY1 = A0;  // Pin para el eje Y del joystick
+const int pinB1 = 2;
+
+const int pinX2 = A6;  // Pin para el eje X del joystick
+const int pinY2 = A7;  // Pin para el eje Y del joystick
+const int pinB2 = 3;
+
+const int pinPot = A4;
+
+//const uint64_t canal = 0x29E29E0;
+const uint64_t canal = 0x67E67E0;
+
+int datos[7];
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  radio.begin();
+  radio.openWritingPipe(canal);
+
+  pinMode(pinB1, INPUT_PULLUP);
+  pinMode(pinB2, INPUT_PULLUP);
+
+
+  
+}
+
+void loop() {
+
+  int x1Value = map(analogRead(pinX1),0,1023,0,255);  // Convertir a un rango de 0-255
+  int y1Value = map(analogRead(pinY1),0,1023,0,255);  // Convertir a un rango de 0-255
+  int b1Value = digitalRead(pinB1); 
+  int x2Value = map(analogRead(pinX2),0,1023,0,255);  // Convertir a un rango de 0-255
+  int y2Value = map(analogRead(pinY2),0,1023,0,255);  // Convertir a un rango de 0-255
+  int b2Value =  digitalRead(pinB2); 
+  int potValue = map(analogRead(pinPot),0,1023,0,255);  // Convertir a un rango de 0-255
+
+  datos[0]=x1Value;
+  datos[1]=y1Value;
+  datos[2]=b1Value;
+  datos[3]=x2Value;
+  datos[4]=y2Value;
+  datos[5]=b2Value;
+  datos[6]=potValue;
+
+bool ok = radio.write(datos, sizeof(datos));
+  //reportamos por el puerto serial los datos enviados 
+  if(ok)
+  {
+     Serial.print("Datos enviados X1: ");  //  Serial.print(datos[0]);
+     Serial.print(datos[0]);
+     Serial.print(" , Y1: "); 
+     Serial.print(datos[1]); 
+     Serial.print(" , B1  = "); 
+     Serial.print(datos[2]);
+     Serial.print(" , X2: ");  //  Serial.print(datos[0]);
+     Serial.print(datos[3]);
+     Serial.print(" , Y2: "); 
+     Serial.print(datos[4]); 
+     Serial.print(" , B2  = "); 
+     Serial.print(datos[5]); 
+     Serial.print(" , Pot  = "); 
+     Serial.println(datos[6]); 
+  }
+ 
+  delay(50);
+}
